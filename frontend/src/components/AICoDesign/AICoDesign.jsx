@@ -292,7 +292,8 @@ function AICoDesign() {
             setChatMessages((prev) => [...prev, {
                 role: 'assistant',
                 content: response.message.content,
-                showSuggestions: false
+                showSuggestions: false,
+                actions: response.actions // Ensure actions are passed to ChatPanel for rendering tables
             }]);
 
 

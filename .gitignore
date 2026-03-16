@@ -43,10 +43,15 @@ logs/
 
 # Temporary / Debug files
 debug_lines.txt
+debug_log*.txt
+debug_request.txt
+api_out.txt
+pid_cmd.txt
 ui_block.txt
+chinese.txt
+test_*.py
 c_to_e.py
 find_c.py
 find_chinese.py
 dump_script.py
 test_read.py
-chinese.txt

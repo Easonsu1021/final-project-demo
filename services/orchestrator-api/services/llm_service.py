@@ -26,6 +26,14 @@ async def process_chat_message(messages_data: List[Any], context: dict = None) -
     # DEMO HACK: Hardcoded response for Scene 1 & 2
     if messages_data and len(messages_data) > 0:
         last_msg_text = messages_data[-1].content.lower()
+        print(f"\n[DEMO DEBUG] Received Context Message: {last_msg_text}\n")
+        
+        try:
+            with open("C:/Users/eason/OneDrive/桌面/final-project-demo-main/debug_log_top.txt", "a", encoding="utf-8") as f:
+                f.write(f"TOP OF FUNCTION RECEIVED: {last_msg_text}\n")
+        except Exception:
+            pass
+            
         if "cowos" in last_msg_text and "execute the packaging flow" not in last_msg_text:
             demo_response = (
                 "收到！我為您規劃了一個 CoWoS 2.5D 完整設計流程：\n"
@@ -170,6 +178,155 @@ async def process_chat_message(messages_data: List[Any], context: dict = None) -
                 }
             ]
             return {"role": "assistant", "content": demo_run_response}, actions
+
+        # SCENE 3: What-If Analysis (e.g., "如果把銅含量改為 5%，翹曲會如何變化？")
+        import re
+        
+        # 最暴力的數字抽取：只要句子裡有數字，就抓最後一個 (或百分比前的數字)
+        nums = re.findall(r'\d+(?:\.\d+)?', last_msg_text.replace("2.5d", ""))
+        
+        # Windows JSON encoding workaround: check for keywords flexibly
+        has_copper = ("銅" in last_msg_text or "copper" in last_msg_text or "cu" in last_msg_text)
+        has_warpage = ("翹" in last_msg_text or "warpage" in last_msg_text or "變化" in last_msg_text)
+
+        try:
+            with open("C:/Users/eason/OneDrive/桌面/final-project-demo-main/debug_log_whatif.txt", "w", encoding="utf-8") as f:
+                f.write(f"last_msg_text: {last_msg_text}\n")
+                f.write(f"has_copper: {has_copper}\n")
+                f.write(f"has_warpage: {has_warpage}\n")
+                f.write(f"nums: {nums}\n")
+        except Exception:
+            pass
+        
+        if has_copper and has_warpage and nums:
+            print("[DEMO] Triggered Scene 3: What-If Analysis")
+            try:
+                new_copper = float(nums[-1])
+                
+                # 從歷史提取原始的參數
+                substrate = 55.0
+                old_copper = 38.0
+                
+                # 往回找最近的 user 提供的數字，就像 Scene 2 一樣
+                for msg in reversed(messages_data):
+                    # 判斷 msg 是 dict 還是物件
+                    msg_role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", "")
+                    msg_content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
+                    
+                    if msg_role != "user" or not msg_content:
+                        continue
+                    
+                    content_lower = msg_content.lower()
+                    
+                    # 避免去解析自己現在發問的這句話 (也就是 "如果改成 66%...")
+                    if "改為" in content_lower or "如果" in content_lower or "what if" in content_lower:
+                        continue 
+                    
+                    sub_match = re.search(r'(\d+)\s*(?:x\s*\d+)?\s*mm', content_lower)
+                    if sub_match: substrate = float(sub_match.group(1))
+                    else:
+                        if "66" in content_lower: substrate = 66.0
+                        elif "55" in content_lower: substrate = 55.0
+                        elif "70" in content_lower: substrate = 70.0
+                    
+                    old_cop_match = re.search(r'(\d+(?:\.\d+)?)\s*%', content_lower)
+                    if old_cop_match: old_copper = float(old_cop_match.group(1))
+                    else:
+                        if "8" in content_lower and "38" not in content_lower: old_copper = 8.0
+                        elif "38" in content_lower: old_copper = 38.0
+                    break # Only scan the last valid configuration message
+                    
+                # 計算基本款的翹曲
+                args_base = {
+                    "tool_height": 0.0075, "magnet": 1, "jig": 0.75, "b1": 10.0, "w1": 10.0,
+                    "substrate": substrate, "copper": old_copper
+                }
+                pred_base = await execute_tool("predict_warpage", args_base)
+                base_warpage = pred_base.get("result", {}).get("warpage_um", 45.2)
+                
+                # 計算新的翹曲
+                args_new = args_base.copy()
+                args_new["copper"] = new_copper
+                pred_new = await execute_tool("predict_warpage", args_new)
+                new_warpage = pred_new.get("result", {}).get("warpage_um", 52.8)
+                
+                # 計算變化
+                diff = new_warpage - base_warpage
+                diff_pct = (diff / base_warpage) * 100 if base_warpage > 0 else 0
+                
+                if diff > 0:
+                    trend_text = f"（增加 {diff_pct:.1f}%） 📈。建議維持 {old_copper}% 或考慮其他材料方案。"
+                else:
+                    trend_text = f"（減少 {-diff_pct:.1f}%） 📉。這是一個可行的改善方向！"
+                    
+                response_text = f"我來幫您預測... 當基板 {substrate}mm 下，銅含量從 {old_copper}% 調整為 **{new_copper}%** 時，預期翹曲為 **{new_warpage:.1f} μm** {trend_text}"
+                
+                return {"role": "assistant", "content": response_text}, [{
+                    "action": "what_if_result",
+                    "old_warpage": base_warpage,
+                    "new_warpage": new_warpage,
+                    "diff_pct": diff_pct
+                }]
+            except Exception as e:
+                return {"role": "assistant", "content": f"計算 What-If 時發生錯誤：{str(e)}"}, []
+
+        # SCENE 4: Parameter Sweep / Scan (e.g., "幫我用不同的 Jig 厚度跑一組參數掃描")
+        if ("掃描" in last_msg_text or "scan" in last_msg_text or "跑一組" in last_msg_text) and ("jig" in last_msg_text or "厚度" in last_msg_text):
+            print("[DEMO] Triggered Scene 4: Parameter Sweep")
+            
+            # Get base params
+            substrate = 66.0
+            copper = 38.0
+            for msg in reversed(messages_data):
+                if msg.role != "user" or "掃描" in msg.content or "掃描" in msg.content:
+                    continue
+                content_lower = msg.content.lower()
+                sub_match = re.search(r'(\d+)\s*(?:x\s*\d+)?\s*mm', content_lower)
+                if sub_match: substrate = float(sub_match.group(1))
+                elif "66" in content_lower: substrate = 66.0
+                elif "55" in content_lower: substrate = 55.0
+                elif "70" in content_lower: substrate = 70.0
+                
+                old_cop_match = re.search(r'(\d+(?:\.\d+)?)\s*%', content_lower)
+                if old_cop_match: copper = float(old_cop_match.group(1))
+                elif "8" in content_lower and "38" not in content_lower: copper = 8.0
+                elif "38" in content_lower: copper = 38.0
+                break
+
+            jig_steps = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+            sweep_results = []
+            best_jig = 0.5
+            best_warpage = 9999.0
+            
+            import asyncio
+            
+            # Batch API calls
+            tasks = []
+            for j in jig_steps:
+                args = {
+                    "tool_height": 0.0075, "magnet": 1, "jig": j, "b1": 10.0, "w1": 10.0,
+                    "substrate": substrate, "copper": copper
+                }
+                tasks.append(execute_tool("predict_warpage", args))
+            
+            api_results = await asyncio.gather(*tasks)
+            
+            for index, res in enumerate(api_results):
+                j = jig_steps[index]
+                w = res.get("result", {}).get("warpage_um", 0.0)
+                sweep_results.append({"jig": j, "warpage": w})
+                if w < best_warpage:
+                    best_warpage = w
+                    best_jig = j
+                    
+            response_text = f"為您執行參數掃描 (Jig 0.5~2.0mm)... 已完成計算。最佳點落在 Jig = {best_jig:.2f}mm，翹曲為 {best_warpage:.1f}μm。"
+            
+            return {"role": "assistant", "content": response_text}, [{
+                "action": "param_sweep",
+                "results": sweep_results,
+                "best_jig": best_jig,
+                "best_warpage": best_warpage
+            }]
 
     project_id = os.getenv("GCP_PROJECT_ID", "rock-figure-489901-v5")
     

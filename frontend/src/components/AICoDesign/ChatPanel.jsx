@@ -162,6 +162,38 @@ function ChatPanel({ messages, onSendMessage, isProcessing, selectedNode }) {
                                 className="message-text"
                                 dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }}
                             />
+                            
+                            {/* Render Custom Action Results */}
+                            {msg.actions && msg.actions.length > 0 && (
+                                <div className="action-results-container">
+                                    {msg.actions.map((act, actIdx) => {
+                                        if (act.action === 'param_sweep' && act.results) {
+                                            return (
+                                                <div key={actIdx} className="param-sweep-table-container" style={{ marginTop: '12px', background: 'var(--bg)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                                                        <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                                            <tr>
+                                                                <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>Jig (mm)</th>
+                                                                <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>翹曲 (μm)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {act.results.map((row, rIdx) => (
+                                                                <tr key={rIdx} style={{ background: row.jig === act.best_jig ? 'rgba(74, 222, 128, 0.1)' : 'transparent' }}>
+                                                                    <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>{row.jig.toFixed(2)}</td>
+                                                                    <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', fontWeight: row.jig === act.best_jig ? 'bold' : 'normal', color: row.jig === act.best_jig ? 'var(--success)' : 'inherit' }}>{row.warpage.toFixed(1)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+                            )}
+
                             {msg.showDownloadOption && (
                                 <div className="download-option">
                                     <button className="download-report-btn" onClick={() => alert(language === 'en' ? 'Generating report... (Demo)' : '報告生成中...（Demo 模擬）')}>
