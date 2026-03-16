@@ -1,0 +1,51 @@
+export const fakeComponents = [
+  {
+    id: 'ADC-12b-5MSPS',
+    name: '12-bit 5MSPS SAR ADC',
+    category: 'Analog-to-Digital Converters',
+    status: 'Verified',
+    version: '2.1.0',
+    description: 'A low-power, high-performance 12-bit Successive Approximation Register (SAR) Analog-to-Digital Converter.',
+    thumbnailUrl: '/images/components/adc.png',
+    specs: {
+      'Resolution': '12 bits',
+      'Sample Rate': '5 MSPS',
+      'Power Consumption': '1.2 mW',
+      'Process Node': '28nm',
+    },
+    usedIn: ['Project Phoenix', 'Project Gemini'],
+  },
+  {
+    id: 'PLL-2.4GHz-FRACN',
+    name: '2.4GHz Fractional-N PLL',
+    category: 'Phase-Locked Loops',
+    status: 'Verified',
+    version: '1.5.2',
+    description: 'A versatile Fractional-N Phase-Locked Loop for wireless communication standards.',
+    thumbnailUrl: '/images/components/pll.png',
+    specs: {
+      'Frequency Range': '2.3 - 2.5 GHz',
+      'Phase Noise': '-125 dBc/Hz @ 1MHz',
+      'Lock Time': '25 µs',
+      'Process Node': '40nm',
+    },
+    usedIn: ['Project Apollo', 'Project Voyager'],
+  },
+  {
+    id: 'LDO-1A-LOW-NOISE',
+    name: '1A Low-Noise LDO Regulator',
+    category: 'Power Management',
+    status: 'In Review',
+    version: '0.9.0',
+    description: 'High PSRR, low-noise Low-Dropout regulator suitable for sensitive analog circuits.',
+    thumbnailUrl: '/images/components/ldo.png',
+    specs: {
+      'Output Current': '1 A',
+      'PSRR': '75 dB @ 1kHz',
+      'Output Noise': '10 µVrms',
+      'Process Node': '65nm',
+    },
+    usedIn: [],
+  },
+  // ...可以加入更多元件
+];
