@@ -24,6 +24,30 @@ function WarpagePredictor() {
     const [recordName, setRecordName] = useState('');
     const [recordNotes, setRecordNotes] = useState('');
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        let updated = false;
+        const newFormData = { ...initialPredictorFormData };
+        
+        ['substrate', 'copper', 'jig'].forEach(key => {
+            if (params.has(key)) {
+                newFormData[key] = params.get(key);
+                updated = true;
+            }
+        });
+        
+        if (updated) {
+            setFormData(newFormData);
+        }
+        
+        if (params.get('autorun') === 'true') {
+            setTimeout(() => {
+                const formToUse = updated ? newFormData : initialPredictorFormData;
+                runPredictionLogic(formToUse, 'convex'); // Default to convex
+            }, 100);
+        }
+    }, []);
+
     // 使用 ref 來獲取繪圖的 DOM 節點
     const surfaceRef = useRef(null);
     const heatmapRef = useRef(null);
@@ -253,16 +277,15 @@ function WarpagePredictor() {
         }));
     };
 
-    // 處理表單提交
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    // 獨立出預測邏輯
+    const runPredictionLogic = async (currentFormData, currentTab = activeTab) => {
         setIsLoading(true);
         setError('');
         setResults(null);
 
         try {
-            const sbthk_vals = formData.sbthk_vals.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-            const material_vals = formData.material_vals.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+            const sbthk_vals = currentFormData.sbthk_vals.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+            const material_vals = currentFormData.material_vals.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
 
             if (sbthk_vals.length !== 33) {
                 throw new Error(`Substrate layers must be 33 values, you entered ${sbthk_vals.length}.`);
@@ -272,21 +295,21 @@ function WarpagePredictor() {
             }
 
             const payload = {
-                magnet: parseInt(formData.magnet),
-                jig: parseFloat(formData.jig),
-                copper: parseInt(formData.copper),
-                b1: parseInt(formData.b1),
-                w1: parseInt(formData.w1),
-                substrate: parseInt(formData.substrate),
+                magnet: parseInt(currentFormData.magnet),
+                jig: parseFloat(currentFormData.jig),
+                copper: parseInt(currentFormData.copper),
+                b1: parseInt(currentFormData.b1),
+                w1: parseInt(currentFormData.w1),
+                substrate: parseInt(currentFormData.substrate),
                 sbthk_vals: sbthk_vals,
                 material_vals: material_vals,
             };
 
-            if (activeTab === 'convex') {
-                payload.tool_height = parseFloat(formData.tool_height);
+            if (currentTab === 'convex') {
+                payload.tool_height = parseFloat(currentFormData.tool_height);
             }
 
-            const response = await fetch(`${PREDICTION_API_BASE_URL}/predict/${activeTab}`, {
+            const response = await fetch(`${PREDICTION_API_BASE_URL}/predict/${currentTab}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
                 body: JSON.stringify(payload)
@@ -300,13 +323,17 @@ function WarpagePredictor() {
             const data = await response.json();
             setResults(data);
 
-            // [移除] 不再自動觸發儲存，改由使用者點擊按鈕觸發
-
         } catch (err) {
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // 處理表單提交
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        await runPredictionLogic(formData, activeTab);
     };
 
     // [新流程] 開啟儲存 Modal

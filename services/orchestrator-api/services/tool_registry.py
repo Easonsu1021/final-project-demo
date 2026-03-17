@@ -6,6 +6,13 @@ from typing import Dict, Any
 DESIGN_API_URL = os.getenv("DESIGN_API_URL", "http://127.0.0.1:8001")
 PREDICTION_API_URL = os.getenv("PREDICTION_API_URL", "http://127.0.0.1:8002")
 
+DEFAULT_SBTHK = [
+    0.015, 0.015, 0.03, 0.015, 0.03, 0.015, 0.03, 0.015, 0.03, 0.015, 0.03,
+    0.015, 0.03, 0.015, 0.03, 0.018, 1.24, 0.018, 0.03, 0.015, 0.03, 0.015,
+    0.03, 0.015, 0.03, 0.015, 0.03, 0.015, 0.03, 0.015, 0.03, 0.015, 0.018
+]
+DEFAULT_MATERIAL = [14900.0, 0.43, 500.0, 0.43, 1.10e-5, 3.70e-5, 130.0]
+
 # Definition of tools the LLM can trigger
 TOOLS = [{
     "function_declarations": [
@@ -23,6 +30,10 @@ TOOLS = [{
             "parameters": {
                 "type": "OBJECT",
                 "properties": {
+                    "target_warpage_type": {
+                        "type": "STRING",
+                        "description": "Type of prediction (convex or concave), default to convex"
+                    },
                     "tool_height": {"type": "NUMBER", "description": "Tool height in mm, e.g. 0.0075"},
                     "magnet": {"type": "INTEGER", "description": "Magnet count, e.g. 1"},
                     "jig": {"type": "NUMBER", "description": "Jig parameter, e.g. 0.75"},
@@ -82,10 +93,11 @@ async def execute_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
                     "substrate": float(arguments.get("substrate", 55.0)),
                     "b1": float(arguments.get("b1", 10.0)),
                     "w1": float(arguments.get("w1", 10.0)),
-                    "sbthk_vals": [0.0]*33,
-                    "material_vals": [0.0]*7
+                    "sbthk_vals": DEFAULT_SBTHK,
+                    "material_vals": DEFAULT_MATERIAL
                 }
-                res = await client.post(f"{PREDICTION_API_URL}/predict/convex", json=data)
+                target_type = arguments.get("target_warpage_type", "convex")
+                res = await client.post(f"{PREDICTION_API_URL}/predict/{target_type}", json=data)
                 res.raise_for_status()
                 result_data = res.json()
                 
@@ -112,10 +124,11 @@ async def execute_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
                     "substrate": float(arguments.get("substrate", 55.0)),
                     "b1": float(arguments.get("b1", 10.0)),
                     "w1": float(arguments.get("w1", 10.0)),
-                    "sbthk_vals": [0.0]*33,
-                    "material_vals": [0.0]*7
+                    "sbthk_vals": DEFAULT_SBTHK,
+                    "material_vals": DEFAULT_MATERIAL
                 }
-                res = await client.post(f"{DESIGN_API_URL}/design/convex", json=data)
+                target_type = arguments.get("target_warpage_type", "convex")
+                res = await client.post(f"{DESIGN_API_URL}/design/{target_type}", json=data)
                 res.raise_for_status()
                 submit_data = res.json()
                 task_id = submit_data.get("task_id")

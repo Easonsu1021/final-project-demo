@@ -50,6 +50,7 @@ async def process_chat_message(messages_data: List[Any], context: dict = None) -
             }]
             return {"role": "assistant", "content": demo_response}, actions
 
+
         # DEMO HACK: Hardcoded response for Scene 2 (Run Flow)
         if "execute the packaging flow" in last_msg_text:
             
@@ -339,7 +340,7 @@ async def process_chat_message(messages_data: List[Any], context: dict = None) -
         # Map frontend roles to Gemini roles ('user' or 'model')
         role = "model" if msg.role == "assistant" else "user"
         gemini_messages.append(
-            types.Content(role=role, parts=[types.Part(text=msg.content)])
+            types.Content(role=role, parts=[types.Part.from_text(msg.content)])
         )
         
     MAX_TURNS = 3

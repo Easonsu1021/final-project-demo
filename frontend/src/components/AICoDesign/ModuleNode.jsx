@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, useReactFlow } from 'reactflow';
 import * as LucideIcons from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -10,8 +10,29 @@ const getLucideIcon = (iconName, props = {}) => {
     return <Icon size={20} strokeWidth={1.5} {...props} />;
 };
 
-const ModuleNode = memo(({ data, selected }) => {
+const ModuleNode = memo(({ id, data, selected }) => {
     const { t, language } = useLanguage();
+    const { setNodes } = useReactFlow();
+
+    const handleParamChange = (paramName, value) => {
+        setNodes((nds) => 
+            nds.map((node) => {
+                if (node.id === id) {
+                    return {
+                        ...node,
+                        data: {
+                            ...node.data,
+                            displayParams: {
+                                ...node.data.displayParams,
+                                [paramName]: value
+                            }
+                        }
+                    };
+                }
+                return node;
+            })
+        );
+    };
 
     const getVendorClass = (vendor) => {
         switch (vendor) {
@@ -78,7 +99,7 @@ const ModuleNode = memo(({ data, selected }) => {
                 <div className="module-params">
                     <div className="param-row">
                         <label>Target</label>
-                        <select className="param-input" defaultValue="convex">
+                        <select className="nodrag param-input" value={data.displayParams?.['Target'] ?? 'convex'} onChange={(e) => handleParamChange('Target', e.target.value)}>
                             <option value="convex">Convex</option>
                             <option value="concave">Concave</option>
                         </select>
@@ -90,15 +111,15 @@ const ModuleNode = memo(({ data, selected }) => {
                 <div className="module-params">
                     <div className="param-row">
                         <label>Substrate (mm)</label>
-                        <input className="param-input" type="number" value={data.displayParams?.['Substrate (mm)'] ?? 55} readOnly />
+                        <input className="nodrag param-input" type="number" value={data.displayParams?.['Substrate (mm)'] ?? 55} onChange={(e) => handleParamChange('Substrate (mm)', e.target.value === '' ? '' : parseFloat(e.target.value))} />
                     </div>
                     <div className="param-row">
                         <label>Copper (%)</label>
-                        <input className="param-input" type="number" value={data.displayParams?.['Copper (%)'] ?? 38} readOnly />
+                        <input className="nodrag param-input" type="number" value={data.displayParams?.['Copper (%)'] ?? 38} onChange={(e) => handleParamChange('Copper (%)', e.target.value === '' ? '' : parseFloat(e.target.value))} />
                     </div>
                     <div className="param-row">
                         <label>Jig (mm)</label>
-                        <input className="param-input" type="number" value={data.displayParams?.['Jig (mm)'] ?? 0.75} readOnly />
+                        <input className="nodrag param-input" type="number" value={data.displayParams?.['Jig (mm)'] ?? 0.75} onChange={(e) => handleParamChange('Jig (mm)', e.target.value === '' ? '' : parseFloat(e.target.value))} />
                     </div>
                 </div>
             )}

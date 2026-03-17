@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Play, Trash2, MousePointerClick, CheckCircle, XCircle, Beaker, FileText, AlertCircle, Cpu } from 'lucide-react';
+import { Play, Trash2, MousePointerClick, CheckCircle, XCircle, Beaker, FileText, AlertCircle, Cpu, ExternalLink } from 'lucide-react';
 import Plotly from 'plotly.js-dist-min/plotly.min.js';
 import ReactFlow, {
     Controls,
@@ -270,6 +270,9 @@ function AICoDesign() {
 
     useEffect(() => {
         const handleKeyDown = (event) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) {
+                return;
+            }
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 deleteSelectedNode();
             }
@@ -428,7 +431,17 @@ function AICoDesign() {
 
         try {
 
-            const prompt = `Please execute the packaging flow according to the following nodes on the canvas: [ ${nodes.map(n => n.data.name).join(' -> ')} ]. Start with predict_warpage and then run optimize_design_parameters if optimization is present. Make up reasonable realistic parameters if none are provided.`;
+            const nodesInfo = nodes.map(n => {
+                if (n.data.id === 'ml-warpage-predictor' && n.data.displayParams) {
+                    return `${n.data.name} (Substrate: ${n.data.displayParams['Substrate (mm)'] ?? 55}mm, Copper: ${n.data.displayParams['Copper (%)'] ?? 38}%, Jig: ${n.data.displayParams['Jig (mm)'] ?? 0.75}mm)`;
+                }
+                if (n.data.id === 'substrate-ai-param-design' && n.data.displayParams) {
+                    return `${n.data.name} (Target: ${n.data.displayParams['Target'] ?? 'convex'})`;
+                }
+                return n.data.name;
+            }).join(' -> ');
+
+            const prompt = `Please execute the packaging flow according to the following nodes on the canvas: [ ${nodesInfo} ]. Start with predict_warpage and then run optimize_design_parameters if optimization is present. Use the provided parameters for prediction.`;
 
             const response = await sendChatMessage([...chatMessages, { role: 'user', content: prompt }]);
 
@@ -619,9 +632,50 @@ function AICoDesign() {
                                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }}></div>
                                 <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text)' }}>3D Warpage Map</h4>
                             </div>
-                            <button onClick={() => setShowWarpageMap(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}>
-                                <XCircle size={16} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                    onClick={() => {
+                                        const warpageNode = nodes.find(n => n.data.id === 'ml-warpage-predictor');
+                                        const params = warpageNode?.data?.displayParams || {};
+                                        
+                                        const query = new URLSearchParams();
+                                        if (params['Substrate (mm)']) query.append('substrate', params['Substrate (mm)']);
+                                        if (params['Copper (%)']) query.append('copper', params['Copper (%)']);
+                                        if (params['Jig (mm)']) query.append('jig', params['Jig (mm)']);
+                                        query.append('autorun', 'true');
+                                        
+                                        const url = `/pcb/warpage.html?${query.toString()}`;
+                                        const windowFeatures = 'width=1280,height=850,resizable=yes,scrollbars=yes';
+                                        window.open(url, '_blank', windowFeatures);
+                                    }}
+                                    style={{
+                                        background: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+                                        border: '1px solid var(--accent)',
+                                        color: 'var(--accent)',
+                                        fontSize: '12px',
+                                        padding: '4px 10px',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'var(--accent)';
+                                        e.currentTarget.style.color = '#fff';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 20%, transparent)';
+                                        e.currentTarget.style.color = 'var(--accent)';
+                                    }}
+                                >
+                                    <ExternalLink size={12} /> View Detail
+                                </button>
+                                <button onClick={() => setShowWarpageMap(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    <XCircle size={16} />
+                                </button>
+                            </div>
                         </div>
                         <div style={{
                             width: '100%',
