@@ -55,3 +55,6 @@ find_c.py
 find_chinese.py
 dump_script.py
 test_read.py
+
+# Large media files
+gemini*/demo.mp4
