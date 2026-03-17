@@ -3,9 +3,9 @@
 **/.venv/
 **/env/
 **/.env/
-**/design-api/
-**/prediction-api/
 **/orchestrator-api/venv/
+services/design-api/design-api/
+services/prediction-api/prediction-api/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
