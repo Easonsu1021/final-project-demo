@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from services.llm_service import process_chat_message
+from services.llm_agent import process_chat_message
 
 router = APIRouter(
     prefix="/orchestrator",
