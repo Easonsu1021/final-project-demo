@@ -75,6 +75,7 @@ TOOLS = [{
 
 async def execute_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Execute a tool based on the name and arguments returned by the LLM."""
+    print(f"[AGENT] 執行工具: {name}, 參數: {arguments}")
     if name == "generate_cowos_flow":
         return {
             "action": "load_flow",

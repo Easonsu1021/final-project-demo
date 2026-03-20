@@ -28,15 +28,53 @@ const createIconSvg = (iconName) => {
     return `<svg class="chat-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 };
 
-// Simple Markdown parser
+// Simple Markdown parser with table support
 const parseMarkdown = (text) => {
     if (!text) return '';
-    return text
+    
+    let html = text
         .replace(/::(\w+)::/g, (match, iconName) => createIconSvg(iconName))
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/^• /gm, '<span class="bullet">•</span> ')
-        .replace(/^---$/gm, '<hr class="chat-divider" />')
-        .replace(/\n/g, '<br />');
+        .replace(/^---$/gm, '<hr class="chat-divider" />');
+
+    // Handle Markdown Tables
+    const lines = html.split('\n');
+    let inTable = false;
+    let tableHtml = '';
+    const processedLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('|') && line.endsWith('|')) {
+            if (!inTable) {
+                inTable = true;
+                tableHtml = '<div class="chat-table-wrapper"><table>';
+            }
+            const cells = line.split('|').filter(c => c !== '').map(c => c.trim());
+            
+            // Check if it is the alignment row (--- | ---)
+            if (line.includes('---')) {
+                continue; 
+            }
+            
+            tableHtml += '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+        } else {
+            if (inTable) {
+                inTable = false;
+                tableHtml += '</table></div>';
+                processedLines.push(tableHtml);
+                tableHtml = '';
+            }
+            processedLines.push(line);
+        }
+    }
+    if (inTable) {
+        tableHtml += '</table></div>';
+        processedLines.push(tableHtml);
+    }
+
+    return processedLines.join('<br />');
 };
 
 function ChatPanel({ messages, onSendMessage, isProcessing, selectedNode }) {
