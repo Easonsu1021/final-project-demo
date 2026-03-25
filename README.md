@@ -77,4 +77,4 @@
    ```
 
 ---
-*專案開發者：Antigravity AI Assistant*
+*專案開發者：蘇子涵*
